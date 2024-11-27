@@ -1,0 +1,168 @@
+Basic 1D Electrostatic Particle-in-Cell (PIC) codes
+by Viktor K. Decyk
+copyright 1994-2023, regents of the university of california
+
+This program contains a simple 1D electrostatic Particle-in-Cell (PIC)
+code, which contains the fundamental procedures needed for such code, as
+as well as some additional diagnostics.  It is intended to provide a
+structure which can be extended to allow students to explore concepts
+encountered in a plasma physics class or for a simple research project.
+It is also useful for testing and evaluating new algorithms or
+diagnostics.  The main code is written in Python and makes use of
+Fortran modules and interactive graphics.  It requires numpy and
+matplotlib.
+
+PIC codes are widely used in plasma physics.  They model plasmas as
+particles which interact self-consistently via the electromagnetic
+fields they themselves produce.  PIC codes generally have three
+important procedures in the main iteration loop.  The first is the
+deposit, where some particle quantity, such as a charge, is accumulated
+on a grid via interpolation to produce a source density.  The second
+important procedure is the field solver, which solves Maxwell’s equation
+or a subset to obtain the electric and/or magnetic fields from the
+source densities.  Finally, once the fields are obtained, the particle
+forces are found by interpolation from the grid, and the particle
+co-ordinates are updated, using Newton’s second law and the Lorentz
+force.  The particle processing parts dominate over the field solving
+parts in a typical PIC application. 
+
+More details about PIC codes can be found in the texts by C. K. Birdsall
+and A. B. Langdon, Plasma Physics via Computer Simulation, 1985,
+R. W. Hockney and J. W. Eastwood, Computer Simulation Using Particles,
+1981, and John M. Dawson, "Particle simulation of plasmas", Rev. Mod.
+Phys. 55, 403 (1983).  Details about the mathematical equations and
+units used in this code is given in the companion article,
+"Description of Electrostatic Spectral Code from the UPIC Framework" by
+Viktor K. Decyk, UCLA, in the file ESModels.pdf.
+
+No warranty for proper operation of this software is given or implied.
+Software or information may be copied, distributed, and used at own
+risk; it may not be distributed without this notice included verbatim
+with each file.  If use of these codes results in a publication, an
+acknowledgement is requested.
+
+The code here uses the simplest force, the electrostatic Coulomb
+interaction, obtained by solving a Poisson equation.  A spectral method
+using Fast Fourier Transforms (FFTs) is used to solve the Poisson
+equation.  A real to complex FFT is used, and the data in Fourier space
+is stored in a packed format, where the input and output sizes are the
+same.  The boundary conditions are periodic, only electron species are
+included, and linear interpolation is used.
+
+Particles are initialized with a uniform distribution in space and two
+gaussian distributions in velocity space.  The inner loop contains a
+charge deposit, an add guard cell procedure, a Poisson solver, two FFTs,
+a copy guard cell procedure, and a particle push procedure.  The final
+energy and timings are printed.  A sample output file for the default
+input parameters is included in the file output1.
+
+In more detail, the inner loop of the code contains the following
+procedures:
+
+Deposit section:
+   wgpost1: deposit charge density
+   waguard1: add charge density guard cells
+
+Field solve section:
+   wfft1r: FFT charge density to fourier space
+   wpois1: calculate smoothed longitudinal electric field in fourier
+           space.
+   wfft1r: FFT smoothed electric field to real space
+
+Particle Push section:
+   wcguard1: fill in guard cells for smoothed electric field
+   wgmpush1: update particle co-ordinates with smoothed electric field:
+             x(t)->x(t+dt); v(t-dt/2)->v(t+dt/2)
+
+The main inputs to the code are the grid parameter indx, the particle
+numbers parameters npx, npxb, the time parameters tend, dt, the velocity
+parameters vtx, vx0, vtdx, and vdx, and the multitasking parameter nvp.
+
+In more detail:
+indx = exponent which determines length in x direction, nx=2**indx.
+   These ensure the system lengths are a power of 2.
+npx = number of electrons distributed in x direction.
+npxb = number of beam electrons in x direction
+   The total number of particles in the simulation is np = npx + npxb.
+tend = time at end of simulation, in units of plasma frequency.
+dt = time interval between successive calculations.
+   The number of time steps the code runs is given by tend/dt+1.
+   dt should be less than or equal to .2 for the electrostatic code.
+vtx = thermal velocity of electrons in x direction
+   a typical value is 1.0.
+vx0 = drift velocity of electrons in x direction.
+vtdx = thermal velocity of beam electrons in x direction
+vdx = drift velocity of beam electrons in x direction
+nvp = number of shared memory threads (0=default)
+
+There are also optional parameters to externally excite plasma waves:
+amodex = wave number which determines k0 = 2*pi*amodex/NX
+freq = frequency of external wave driver
+trmp = ramp-up time for external wave driver
+toff = shut-off time for external wave driver
+The external driver is of the form:
+fxe(x) = fxe(x) + e1*sin(k0*x + freq*time) + e2*cos(k0*x - freq*time)
+where
+    e1 = el0*(time/trmp), e2 = er0*(time/trmp), if time < trmp
+    e1 = el0,             e2 = er0,             if trmp < time < toff
+    e1 = el0*((toff+trmp-time)/trmp), e2 = er0*((toff+trmp-time)/trmp)
+                                           if toff < time < toff+trmp
+    e1 = 0,               e2 = 0,               if time > toff+trmp
+if toff < 0 => toff = + infinity
+There is a linear ramp and the beginning and at the end. By default,
+this driver is turned off
+
+There are additional parameters for diagnostics:
+The parameters nte, ntv, nts, ntw control how how many time steps
+between diagnostics, nmv controls velocity space resolution.
+In more detail:
+nte = number of time steps between electric field display
+ntv = number of time steps between velocity-space diagnostic
+nmv = number of segments in v for velocity distribution
+nts = number of time steps between phase space display
+ntw = number of time steps between energy display 
+
+The major program files contained here include:
+gui_espic1.py  Main Python user interface to this program
+espic1.py      Main Python script
+espic1.f90     Fortran90 main program 
+push1.f        Fortran procedure library
+diag1.f        Fortran diagnostic library
+push1_h.f90    Fortran90 procedure interface (header) library
+diag1_h.f90    Fortran90 diagnostic interface (header) library
+wpush1.f90     Wrapper library for Fortran procedures
+dwpush1.f90    Double precision wrapper library for Fortran procedures
+wdiag1.f90     Wrapper library for Fortran diagnostic procedures
+dwdiag1.f90    Double precision wrapper library for Fortran diagnostic
+               procedures
+omplib.f90     OpenMP support library
+dtimer_hpy.f90 Wrapper library for Unix timer dtimer.c
+dtimer.c       C Unix timer function
+
+Files with the suffix .f90 and .f adhere to the Fortran 90 standard,
+files with the suffix .c adhere to the C99 standard.  Files with the
+suffix .py will run with either python2 or python3.
+
+The makefile is setup to use gfortran with Linux.  Other compilers are
+supported in the Makefile, but are commented out.  
+
+To compile the python modules, execute: make or make python
+
+To execute with the GUI (Graphical User Interface), type:
+python3 gui_espic1.py or python gui_espic1.py
+
+Details about the GUI is given in the file PIC1_GUI.pdf.
+
+It is also possible to execute the program in Python without the GUI,
+by typing: python3 espic1.py or python espic1.py
+
+One can also create a Fortran main program without Python or the GUI
+by executing:
+make fortran
+This will create an executable called espic1, which can be executed by 
+typing:
+./espic1
+
+The particle push (wgmpush1) runs in parallel by default.  One can also
+run a serial particle push (wgpush1) by setting the input parameter
+nvp = 1, in either espic1.py or espic1.f90.

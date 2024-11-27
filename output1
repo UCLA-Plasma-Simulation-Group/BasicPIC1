@@ -1,0 +1,18 @@
+ using           16  thread(s)
+ Initial Field, Kinetic and Total Energies:
+ 0.2263937E-21 0.3250784E+06 0.3250784E+06
+ ntime =          501
+ Final Field, Kinetic and Total Energies:
+ 0.2076392E+04 0.3229982E+06 0.3250746E+06
+
+ Energy Conservation(%) =   -1.1700800390293405E-003
+
+ initialization time =    8.9280000000000002E-003
+ deposit time =   0.18056999999999920     
+ push time =    7.3728999999999892E-002
+ total particle time =   0.25429899999999911     
+ total time =   0.27804200000000001     
+
+ Push Time (nsec) =   0.72583092968104090     
+ Deposit Time (nsec) =    1.7776355433073168     
+ Total Particle Time (nsec) =    2.5034664729883578 
