@@ -1,6 +1,6 @@
 Basic 1D Electrostatic Particle-in-Cell (PIC) codes
-by Viktor K. Decyk
-copyright 1994-2023, regents of the university of california
+by Viktor K. Decyk (decyk@physics.ucla.edu)
+copyright 1994-2024, regents of the university of california
 
 This program contains a simple 1D electrostatic Particle-in-Cell (PIC)
 code, which contains the fundamental procedures needed for such code, as
